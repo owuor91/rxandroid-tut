@@ -22,6 +22,8 @@
 
 package com.raywenderlich.cheesefinder;
 
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.View;
 
 import java.util.List;
@@ -39,9 +41,17 @@ public class CheeseActivity extends BaseSearchActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        Observable<String> searchTextObservable = createButtonClickObservable();
+        Observable<String> searchTextObservable = createTextChangedObservable();
 
-        searchTextObservable.observeOn(Schedulers.io())
+        searchTextObservable
+                .observeOn(AndroidSchedulers.mainThread())
+                .doOnNext(new Consumer<String>() {
+                    @Override
+                    public void accept(String s) throws Exception {
+                        showProgressBar();
+                    }
+                })
+                .observeOn(Schedulers.io())
                 .map(new Function<String, List<String>>() {
                     @Override
                     public List<String> apply(String s) throws Exception {
@@ -53,6 +63,7 @@ public class CheeseActivity extends BaseSearchActivity {
                     @Override
                     public void accept(List<String> strings) throws Exception {
                         showResult(strings);
+                        hideProgressBar();
                     }
                 });
     }
@@ -77,4 +88,36 @@ public class CheeseActivity extends BaseSearchActivity {
             }
         });
     }
+
+    private Observable<String> createTextChangedObservable(){
+        Observable<String> textChangedObservable = Observable.create(new ObservableOnSubscribe<String>() {
+            @Override
+            public void subscribe(final ObservableEmitter<String> e) throws Exception {
+                final TextWatcher textWatcher = new TextWatcher() {
+                    @Override
+                    public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+                    }
+
+                    @Override
+                    public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+                        e.onNext(charSequence.toString());
+                    }
+
+                    @Override
+                    public void afterTextChanged(Editable editable) {
+                    }
+                };
+
+                mQueryEditText.addTextChangedListener(textWatcher);
+
+                e.setCancellable(new Cancellable() {
+                    @Override
+                    public void cancel() throws Exception {
+                        mQueryEditText.removeTextChangedListener(textWatcher);
+                    }
+                });
+            }
+        });
+        return textChangedObservable;
+     }
 }
