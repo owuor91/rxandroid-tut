@@ -27,6 +27,7 @@ import android.text.TextWatcher;
 import android.view.View;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import io.reactivex.Observable;
 import io.reactivex.ObservableEmitter;
@@ -42,7 +43,9 @@ public class CheeseActivity extends BaseSearchActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        Observable<String> searchTextObservable = createTextChangedObservable();
+        Observable<String> buttonClickObservable = createButtonClickObservable();
+        Observable<String> textChangedObservable = createTextChangedObservable();
+        Observable<String> searchTextObservable = Observable.merge(buttonClickObservable, textChangedObservable);
 
         searchTextObservable
                 .observeOn(AndroidSchedulers.mainThread())
@@ -124,6 +127,6 @@ public class CheeseActivity extends BaseSearchActivity {
             public boolean test(String s) throws Exception {
                 return s.length() >=2;
             }
-        });
+        }).debounce(1000, TimeUnit.MILLISECONDS);
      }
 }
